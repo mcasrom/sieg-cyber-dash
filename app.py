@@ -19,6 +19,11 @@ from modules.advanced_kpis import AdvancedKPIs
 from dotenv import load_dotenv
 load_dotenv()
 
+# ── Constantes globales ───────────────────────────────────────────────────────
+DASHBOARD_URL  = "https://sieg-cyber-dash.onrender.com"
+SIEG_OSINT_URL = "https://mcasrom.github.io/sieg-osint"
+GITHUB_URL     = "https://github.com/mcasrom/sieg-cyber-dash"
+
 # ── Telegram ─────────────────────────────────────────────────────────────────
 TELEGRAM_TOKEN    = os.getenv("TELEGRAM_TOKEN", "")
 TELEGRAM_CHAT_ID  = os.getenv("TELEGRAM_CHAT_ID", "-1003730038735")
@@ -175,10 +180,7 @@ KOFI_WIDGET = html.Div([
     "minWidth":     "130px",
 })
 
-# ── Constantes globales ───────────────────────────────────────────────────────
-DASHBOARD_URL  = "https://sieg-cyber-dash.onrender.com"
-SIEG_OSINT_URL = "https://mcasrom.github.io/sieg-osint"
-GITHUB_URL     = "https://github.com/mcasrom/sieg-cyber-dash"
+
 
 # ── Layout ────────────────────────────────────────────────────────────────────
 def build_layout():
