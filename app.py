@@ -140,8 +140,11 @@ try:
     _INITIAL_DATA = get_data()
     print(f"[INIT] {len(_INITIAL_DATA)} eventos listos")
 except Exception as e:
-    print(f"[INIT] Error en carga inicial: {e}")
+    print(f"[INIT] Error en carga inicial (modo seguro): {e}")
     _INITIAL_DATA = []
+    # Reset cache para que el primer Interval reintente
+    _cache["data"] = None
+    _cache["ts"]   = None
 
 # ── Widget flotante: Ko-fi + links ───────────────────────────────────────────
 KOFI_WIDGET = html.Div([
