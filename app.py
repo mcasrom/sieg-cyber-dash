@@ -111,9 +111,16 @@ def _normalize(data: list) -> list:
                 d[key] = val.isoformat()
             elif val is not None and str(val) in ('NaT', 'nan', 'None'):
                 d[key] = datetime.now().isoformat()
+        # Mapear campos español→inglés antes de setdefault
+        if not d.get('origin') or d.get('origin') == '?':
+            d['origin'] = d.get('fuente') or d.get('feed') or 'Desconocido'
+        if not d.get('title'):
+            d['title'] = d.get('titulo', 'Sin título')
+        if not d.get('risk'):
+            d['risk'] = d.get('riesgo', 'Medio')
         d.setdefault('title',   d.get('titulo', 'Sin título'))
-        d.setdefault('risk',    'Medio')
-        d.setdefault('origin',  'Desconocido')
+        d.setdefault('risk',    d.get('riesgo', 'Medio'))
+        d.setdefault('origin',  d.get('fuente', 'Desconocido'))
         d.setdefault('region',  'Global')
         d.setdefault('lat',     0.0)
         d.setdefault('lon',     0.0)
@@ -439,13 +446,15 @@ def refresh_data(n):
     data  = get_data()
     stats = db.get_stats()
     size  = db.get_size_mb()
+    last_sync = db.get_last_sync()
+    sync_str  = last_sync[:16] if last_sync else datetime.now().strftime("%Y-%m-%d %H:%M")
     status = html.Div([
         html.Span(f"📡 {len(data)} eventos", style={"color": C["accent"]}),
         html.Br(),
-        html.Small(f"Histórico: {stats['total']} eventos | {stats['criticos']} críticos",
+        html.Small(f"Histórico: {stats['total']} eventos · {stats['criticos']} críticos",
                    style={"color": C["muted"]}),
         html.Br(),
-        html.Small(datetime.now().strftime("%d/%m/%Y %H:%M"), style={"color": C["muted"]}),
+        html.Small(f"🕐 Sync: {sync_str}", style={"color": C["accent3"]}),
     ])
     return json.dumps(data), status, f"Base de datos: {size} MB"
 
@@ -579,28 +588,62 @@ def update_all(json_data):
         ))
     origin_fig.update_layout(**PLOTLY_BASE, title="Eventos por fuente", height=400)
 
-    dates = []
-    for d in data[:200]:
-        try:
-            pub = d.get('published', d.get('fecha', ''))
-            if pub and isinstance(pub, str) and pub not in ('NaT', 'nan', 'None'):
-                dates.append(datetime.fromisoformat(pub[:19]).date())
-        except Exception:
-            pass
-
+    # Tendencia histórica desde SQLite (14 días reales)
+    hist = db.get_historical_kpis(days=14)
     trend_fig = go.Figure()
-    if dates:
-        date_counts  = Counter(dates)
-        sorted_dates = sorted(date_counts.items())[-30:]
+    if hist:
         trend_fig.add_trace(go.Scatter(
-            x=[str(d[0]) for d in sorted_dates],
-            y=[d[1]      for d in sorted_dates],
+            x=[h['day'] for h in hist],
+            y=[h['total'] for h in hist],
+            name='Total',
             mode='lines+markers',
             line=dict(color=C["accent"], width=2),
             fill='tozeroy',
-            fillcolor='rgba(0, 212, 255, 0.1)',
+            fillcolor='rgba(0, 212, 255, 0.08)',
         ))
-    trend_fig.update_layout(**PLOTLY_BASE, title="Evolución temporal", height=400)
+        trend_fig.add_trace(go.Scatter(
+            x=[h['day'] for h in hist],
+            y=[h['criticos'] for h in hist],
+            name='Críticos',
+            mode='lines+markers',
+            line=dict(color=C["critical"], width=2, dash='dot'),
+        ))
+        trend_fig.add_trace(go.Scatter(
+            x=[h['day'] for h in hist],
+            y=[h['altos'] for h in hist],
+            name='Altos',
+            mode='lines+markers',
+            line=dict(color=C["alto"], width=1, dash='dot'),
+        ))
+    else:
+        # Fallback: datos en memoria del RSS actual
+        dates = []
+        for d in data[:200]:
+            try:
+                pub = d.get('published', d.get('fecha', ''))
+                if pub and isinstance(pub, str) and pub not in ('NaT', 'nan', 'None'):
+                    dates.append(datetime.fromisoformat(pub[:19]).date())
+            except Exception:
+                pass
+        if dates:
+            date_counts  = Counter(dates)
+            sorted_dates = sorted(date_counts.items())[-14:]
+            trend_fig.add_trace(go.Scatter(
+                x=[str(d[0]) for d in sorted_dates],
+                y=[d[1]      for d in sorted_dates],
+                name='Total',
+                mode='lines+markers',
+                line=dict(color=C["accent"], width=2),
+                fill='tozeroy',
+                fillcolor='rgba(0, 212, 255, 0.1)',
+            ))
+    last_sync = db.get_last_sync()
+    sync_label = f"Último sync: {last_sync[:16]}" if last_sync else "Histórico 14 días"
+    trend_fig.update_layout(**PLOTLY_BASE,
+        title=f"Evolución histórica · {sync_label}",
+        height=400,
+        legend=dict(bgcolor='rgba(0,0,0,0)', font=dict(size=10)),
+    )
 
     sector_fig = go.Figure()
     if sector_data:

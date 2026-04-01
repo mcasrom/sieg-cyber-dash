@@ -112,39 +112,64 @@ class AdvancedKPIs:
                 for s, c in sorted_sectors if c > 0][:5]
     
     def botnet_activity(self, data_list):
-        """Detecta actividad de botnets por keywords"""
+        """Detecta actividad de botnets por keywords y campo botnet_family"""
         botnet_keywords = {
-            'Mirai': ['mirai', 'iot', 'dvr', 'camera', 'botnet'],
-            'Emotet': ['emotet', 'geodo', 'maldoc'],
-            'Trickbot': ['trickbot', 'trickloader'],
-            'LockBit': ['lockbit', 'ransomware'],
-            'Dridex': ['dridex', 'bugat'],
-            'Gafgyt': ['gafgyt', 'bashlite']
+            'Mirai':         ['mirai', 'iot botnet', 'dvr exploit'],
+            'Emotet':        ['emotet', 'geodo', 'maldoc'],
+            'Trickbot':      ['trickbot', 'trickloader'],
+            'LockBit':       ['lockbit', 'ransomware'],
+            'Dridex':        ['dridex', 'bugat'],
+            'Gafgyt':        ['gafgyt', 'bashlite'],
+            'AgentTesla':    ['agenttesla', 'agent tesla'],
+            'RedLine':       ['redline stealer', 'redlinestealer'],
+            'Lumma':         ['lumma', 'lummac'],
+            'AsyncRAT':      ['asyncrat'],
+            'NjRAT':         ['njrat', 'bladabindi'],
+            'Cobalt Strike': ['cobalt strike', 'cobaltstrike'],
         }
-        
+
         detected = []
-        for d in data_list[:200]:
-            title = d.get('titulo', d.get('title', '')).lower()
-            for family, keywords in botnet_keywords.items():
-                if any(kw in title for kw in keywords):
-                    detected.append({
-                        'family': family,
-                        'title': title[:80],
-                        'source': d.get('fuente', d.get('origin', 'Unknown'))
-                    })
-                    break
-        
-        # Contar por familia
+        for d in data_list[:500]:
+            title   = d.get('titulo', d.get('title', '')).lower()
+            resumen = d.get('resumen', d.get('summary', '')).lower()
+            bf      = str(d.get('botnet_family', '') or '').strip('"\' ').lower()
+
+            matched_family = None
+
+            # 1. Campo botnet_family directo (MalwareBazaar)
+            if bf and bf not in ('n/a', 'none', '', 'unknown'):
+                for family, keywords in botnet_keywords.items():
+                    if any(kw in bf for kw in keywords) or bf == family.lower():
+                        matched_family = family
+                        break
+                if not matched_family:
+                    matched_family = bf.title()
+
+            # 2. Buscar en title + resumen
+            if not matched_family:
+                for family, keywords in botnet_keywords.items():
+                    if any(kw in title or kw in resumen for kw in keywords):
+                        matched_family = family
+                        break
+
+            if matched_family:
+                detected.append({
+                    'family':  matched_family,
+                    'title':   title[:80],
+                    'source':  d.get('fuente', d.get('origin', 'Unknown')),
+                    'country': d.get('botnet_country') or d.get('region', 'Global'),
+                })
+
         family_counts = Counter([d['family'] for d in detected])
-        
+
         return {
-            'total_detected': len(detected),
+            'total_detected':  len(detected),
             'active_families': len(family_counts),
-            'top_families': family_counts.most_common(5),
-            'recent_threats': detected[:10],
-            'alert_level': 'CRÍTICO' if len(detected) > 20 else 'Alto' if len(detected) > 10 else 'Moderado'
+            'top_families':    family_counts.most_common(5),
+            'recent_threats':  detected[:10],
+            'alert_level':     'CRÍTICO' if len(detected) > 20 else 'Alto' if len(detected) > 10 else 'Moderado',
         }
-    
+
     def weekly_summary(self, data_list):
         """Resumen semanal"""
         from datetime import datetime

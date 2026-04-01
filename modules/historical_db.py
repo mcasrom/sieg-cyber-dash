@@ -114,6 +114,40 @@ class HistoricalDB:
             logger.error(f"Error obteniendo stats: {e}")
             return {'total': 0, 'criticos': 0}
     
+
+    def get_historical_kpis(self, days=14):
+        """KPIs históricos por día para gráfico de tendencia real"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.execute("""
+                    SELECT
+                        date(published)                                          AS day,
+                        COUNT(*)                                                 AS total,
+                        SUM(CASE WHEN risk='Crítico' THEN 1 ELSE 0 END)         AS criticos,
+                        SUM(CASE WHEN risk='Alto'    THEN 1 ELSE 0 END)         AS altos,
+                        SUM(CASE WHEN risk='Medio'   THEN 1 ELSE 0 END)         AS medios
+                    FROM events
+                    WHERE published >= date('now', ?)
+                    GROUP BY day
+                    ORDER BY day ASC
+                """, (f'-{days} days',))
+                rows = cursor.fetchall()
+                return [{'day': r[0], 'total': r[1], 'criticos': r[2],
+                         'altos': r[3], 'medios': r[4]} for r in rows]
+        except Exception as e:
+            logger.error(f"Error get_historical_kpis: {e}")
+            return []
+
+    def get_last_sync(self):
+        """Timestamp del último evento guardado"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                row = conn.execute(
+                    "SELECT MAX(created_at) FROM events"
+                ).fetchone()
+                return row[0] if row and row[0] else None
+        except:
+            return None
     def get_size_mb(self):
         """Obtiene tamaño de la base de datos en MB"""
         try:
