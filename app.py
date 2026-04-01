@@ -42,6 +42,7 @@ def send_telegram_alert(event: dict):
         f"📡 Fuente: `{origin}`\n"
         f"🌍 Región: `{region}`\n"
         f"🕐 Fecha: `{published}`\n\n"
+        f"🔗 [Ver dashboard]({DASHBOARD_URL})\n\n"
         f"_Monitor SIEG · sieg-cyber-dash_"
     )
     try:
@@ -137,18 +138,30 @@ except Exception as e:
     print(f"[INIT] Error en carga inicial: {e}")
     _INITIAL_DATA = []
 
-# ── Ko-fi flotante ────────────────────────────────────────────────────────────
+# ── Widget flotante: Ko-fi + links ───────────────────────────────────────────
 KOFI_WIDGET = html.Div([
+    # Ko-fi
     html.A(
-        html.Img(
-            src="https://storage.ko-fi.com/cdn/kofi3.png?v=3",
-            alt="Support on Ko-fi",
-            style={"height": "36px", "border": "0px"},
-        ),
+        html.Img(src="https://storage.ko-fi.com/cdn/kofi3.png?v=3",
+                 alt="Support on Ko-fi",
+                 style={"height": "32px", "border": "0px"}),
         href="https://ko-fi.com/mcasrom",
         target="_blank",
-        style={"textDecoration": "none"},
-    )
+        style={"textDecoration": "none", "display": "block", "marginBottom": "8px"},
+    ),
+    html.Hr(style={"borderColor": C["border"], "margin": "4px 0"}),
+    # SIEG OSINT
+    html.A("🌐 SIEG-OSINT",
+           href=SIEG_OSINT_URL,
+           target="_blank",
+           style={"color": C["accent"], "textDecoration": "none",
+                  "fontSize": "0.75rem", "display": "block", "marginBottom": "4px"}),
+    # GitHub
+    html.A("⚙️ GitHub",
+           href=GITHUB_URL,
+           target="_blank",
+           style={"color": C["muted"], "textDecoration": "none",
+                  "fontSize": "0.75rem", "display": "block"}),
 ], style={
     "position":     "fixed",
     "bottom":       "24px",
@@ -157,9 +170,15 @@ KOFI_WIDGET = html.Div([
     "background":   C["panel"],
     "border":       f"1px solid {C['border']}",
     "borderRadius": "8px",
-    "padding":      "8px 12px",
+    "padding":      "10px 14px",
     "boxShadow":    "0 4px 20px rgba(0,212,255,0.15)",
+    "minWidth":     "130px",
 })
+
+# ── Constantes globales ───────────────────────────────────────────────────────
+DASHBOARD_URL  = "https://sieg-cyber-dash.onrender.com"
+SIEG_OSINT_URL = "https://mcasrom.github.io/sieg-osint"
+GITHUB_URL     = "https://github.com/mcasrom/sieg-cyber-dash"
 
 # ── Layout ────────────────────────────────────────────────────────────────────
 def build_layout():
@@ -174,19 +193,19 @@ def build_layout():
                             html.Span("🛡️ SIEG", style={"color": C["accent"]}),
                             html.Span(" · Cyber-Dash", style={"color": C["text"]}),
                         ], style={"fontSize": "2.5rem", "margin": "0"}),
-                        html.P("Monitor de ciberamenazas en tiempo real · INCIBE · NVD · CISA",
+                        html.P("Monitor de ciberamenazas en tiempo real · INCIBE · NVD · CISA · ANSSI · MalwareBazaar",
                                style={"color": C["muted"]}),
                     ], md=7),
                     dbc.Col([
                         html.Div(id="hero-status", style={"textAlign": "right"})
                     ], md=5),
                 ]),
-            ], fluid=True),
+            ], fluid=False),  # fluid=False añade márgenes laterales automáticos
         ], style={"background": C["hero_bg"], "padding": "20px",
                   "borderBottom": f"1px solid {C['border']}"}),
 
         dbc.Container([
-            dbc.Row(id="kpi-row",           className="mb-3"),
+            dbc.Row(id="kpi-row",           className="mb-3 mt-3"),
             dbc.Row(id="advanced-kpis-row", className="mb-3"),
 
             dcc.Tabs([
