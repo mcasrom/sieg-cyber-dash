@@ -124,6 +124,11 @@ def _normalize(data: list) -> list:
         d.setdefault('region',  'Global')
         d.setdefault('lat',     0.0)
         d.setdefault('lon',     0.0)
+        # Preservar campos especiales MalwareBazaar
+        if 'botnet_family' not in d:
+            d['botnet_family'] = ''
+        if 'botnet_country' not in d:
+            d['botnet_country'] = ''
     return data
 
 def get_data() -> list:
@@ -536,8 +541,8 @@ def update_all(json_data):
 
         dbc.Col(dbc.Card(dbc.CardBody([
             html.H4("🦠 Botnets", style={"color": C["muted"], "fontSize": "0.8rem"}),
-            html.H2(botnet_data['active_families'], style={"color": C["medio"], "fontSize": "2rem", "fontWeight": "700"}),
-            html.Small(f"{botnet_data['total_detected']} eventos", style={"color": C["muted"]}),
+            html.H2(botnet_data['total_detected'], style={"color": C["medio"], "fontSize": "2rem", "fontWeight": "700"}),
+            html.Small(f"{botnet_data['active_families']} familias · {botnet_data['alert_level']}", style={"color": C["muted"]}),
         ]), style={"background": C["panel"], "borderLeft": f"4px solid {C['medio']}"}), width=3),
     ]
 
