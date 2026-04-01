@@ -137,7 +137,7 @@ class AdvancedKPIs:
             matched_family = None
 
             # 1. Campo botnet_family directo (MalwareBazaar)
-            if bf and bf not in ('n/a', 'none', '', 'unknown'):
+            if bf and bf not in ('n/a', 'none', '', 'unknown', 'nan', 'null'):
                 for family, keywords in botnet_keywords.items():
                     if any(kw in bf for kw in keywords) or bf == family.lower():
                         matched_family = family
